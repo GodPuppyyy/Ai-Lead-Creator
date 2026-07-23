@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sample Business Website</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    margin: 0;
+    background: #f4f5f7;
+  }
+  .placeholder-page {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 80px 30px;
+    text-align: center;
+    color: #444;
+  }
+  .placeholder-page h1 { font-size: 30px; color: #1a1a1a; }
+
+  /* ---------- Chat Widget ---------- */
+  #chat-bubble {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    width: 62px;
+    height: 62px;
+    border-radius: 50%;
+    background: #2563eb;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    z-index: 9999;
+    font-size: 28px;
+  }
+  #chat-bubble:hover { background: #1d4ed8; }
+
+  #chat-window {
+    position: fixed;
+    bottom: 100px;
+    right: 24px;
+    width: 340px;
+    max-width: 90vw;
+    height: 460px;
+    max-height: 70vh;
+    background: white;
+    border-radius: 14px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+    z-index: 9999;
+  }
+  #chat-window.open { display: flex; }
+
+  #chat-header {
+    background: #2563eb;
+    color: white;
+    padding: 16px 18px;
+    font-weight: 600;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  #chat-header .subtitle {
+    font-weight: 400;
+    font-size: 12.5px;
+    opacity: 0.85;
+    display: block;
+    margin-top: 2px;
+  }
+  #chat-close {
+    cursor: pointer;
+    font-size: 20px;
+    line-height: 1;
+    opacity: 0.9;
+  }
+
+  #chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: #fafbfc;
+  }
+  .msg {
+    max-width: 80%;
+    padding: 10px 13px;
+    border-radius: 12px;
+    font-size: 14px;
+    line-height: 1.45;
+  }
+  .msg.bot {
+    background: #eef1f5;
+    color: #1a1a1a;
+    align-self: flex-start;
+    border-bottom-left-radius: 2px;
+  }
+  .msg.user {
+    background: #2563eb;
+    color: white;
+    align-self: flex-end;
+    border-bottom-right-radius: 2px;
+  }
+  .msg.typing {
+    background: #eef1f5;
+    color: #888;
+    align-self: flex-start;
+    font-style: italic;
+  }
+
+  #chat-input-row {
+    display: flex;
+    border-top: 1px solid #e5e7eb;
+    padding: 10px;
+    gap: 8px;
+  }
+  #chat-input {
+    flex: 1;
+    border: 1px solid #d8dade;
+    border-radius: 20px;
+    padding: 9px 14px;
+    font-size: 14px;
+    outline: none;
+  }
+  #chat-input:focus { border-color: #2563eb; }
+  #chat-send {
+    background: #2563eb;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 38px;
+    height: 38px;
+    cursor: pointer;
+    font-size: 16px;
+  }
+  #chat-send:hover { background: #1d4ed8; }
+  #chat-send:disabled { background: #a8c1f0; cursor: not-allowed; }
+
+  #chat-ended {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 16px;
+    border-top: 1px solid #e5e7eb;
+    background: #fafbfc;
+  }
+  #chat-ended.show { display: flex; }
+  #chat-ended p {
+    margin: 0;
+    font-size: 13px;
+    color: #666;
+    text-align: center;
+  }
+  #chat-new-btn {
+    background: #2563eb;
+    color: white;
+    border: none;
+    border-radius: 20px;
+    padding: 9px 18px;
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  #chat-new-btn:hover { background: #1d4ed8; }
+  .msg.ended {
+    align-self: center;
+    background: transparent;
+    color: #888;
+    font-size: 12.5px;
+    text-align: center;
+    max-width: 100%;
+    padding: 4px 0;
+  }
+</style>
+</head>
+<body>
+
+  <!-- This represents a business's normal website content -->
+  <div class="placeholder-page">
+    <h1>Welcome to [Your Business Name]</h1>
+    <p>This page stands in for a real client's website. The chat bubble in the bottom-right corner is the live AI widget — click it to try a conversation.</p>
+  </div>
+
+  <!-- Chat bubble + window -->
+  <div id="chat-bubble">💬</div>
+  <div id="chat-window">
+    <div id="chat-header">
+      <div>
+        Chat with us
+        <span class="subtitle">Usually replies instantly</span>
+      </div>
+      <div id="chat-close">✕</div>
+    </div>
+    <div id="chat-messages"></div>
+    <div id="chat-input-row">
+      <input type="text" id="chat-input" placeholder="Type a message...">
+      <button id="chat-send">➤</button>
+    </div>
+    <div id="chat-ended">
+      <p>Your chat has ended — thanks for reaching out! Someone from our team will be in touch soon.</p>
+      <button id="chat-new-btn">Start a new chat</button>
+    </div>
+  </div>
+
+  <script>
+    // n8n Chat Webhook — Production URL (Live Chat Widget workflow)
+    const CHAT_WEBHOOK_URL = "https://jasonweng.app.n8n.cloud/webhook/live-chat";
+    // Shared secret so random requests to the public webhook URL get rejected.
+    // Yes, this is visible in the page source — it's a deterrent against casual/automated
+    // abuse of the endpoint, not a substitute for real server-side auth.
+    const CHAT_WEBHOOK_KEY = "5e91be8c1eac158436af1cb9412df126";
+
+    // Unique ID per visitor session, so the AI Agent's memory keeps conversations separate
+    function newSessionId() {
+      return "session-" + Math.random().toString(36).substring(2, 12) + "-" + Date.now();
+    }
+    let sessionId = newSessionId();
+
+    const bubble = document.getElementById('chat-bubble');
+    const chatWindow = document.getElementById('chat-window');
+    const closeBtn = document.getElementById('chat-close');
+    const messagesEl = document.getElementById('chat-messages');
+    const input = document.getElementById('chat-input');
+    const sendBtn = document.getElementById('chat-send');
+    const inputRow = document.getElementById('chat-input-row');
+    const endedEl = document.getElementById('chat-ended');
+    const newChatBtn = document.getElementById('chat-new-btn');
+
+    let opened = false;
+
+    bubble.addEventListener('click', () => {
+      chatWindow.classList.toggle('open');
+      if (!opened) {
+        opened = true;
+        addMessage("Hi! Have a question? Ask away and I'll get back to you right away.", 'bot');
+      }
+    });
+    closeBtn.addEventListener('click', () => chatWindow.classList.remove('open'));
+
+    function endChat() {
+      inputRow.style.display = 'none';
+      endedEl.classList.add('show');
+    }
+
+    function startNewChat() {
+      sessionId = newSessionId();
+      messagesEl.innerHTML = '';
+      endedEl.classList.remove('show');
+      inputRow.style.display = 'flex';
+      input.disabled = false;
+      sendBtn.disabled = false;
+      addMessage("Hi! Have a question? Ask away and I'll get back to you right away.", 'bot');
+      input.focus();
+    }
+    newChatBtn.addEventListener('click', startNewChat);
+
+    function addMessage(text, sender) {
+      const div = document.createElement('div');
+      div.className = 'msg ' + sender;
+      div.textContent = text;
+      messagesEl.appendChild(div);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+      return div;
+    }
+
+    async function sendMessage() {
+      const text = input.value.trim();
+      if (!text) return;
+      addMessage(text, 'user');
+      input.value = '';
+      sendBtn.disabled = true;
+
+      const typingEl = addMessage('Typing...', 'typing');
+
+      try {
+        // Sent as a GET with query params (not a POST with a JSON body) so the browser
+        // never issues a CORS preflight (OPTIONS) request — n8n Cloud's webhook CORS
+        // handling doesn't reliably answer preflight requests, but plain GETs skip it entirely.
+        const url = CHAT_WEBHOOK_URL
+          + '?sessionId=' + encodeURIComponent(sessionId)
+          + '&message=' + encodeURIComponent(text)
+          + '&key=' + encodeURIComponent(CHAT_WEBHOOK_KEY);
+        const res = await fetch(url, { method: 'GET' });
+
+        const data = await res.json();
+        typingEl.remove();
+
+        // Adjust this line if your workflow's response field is named differently
+        addMessage(data.reply || data.output || "Sorry, something went wrong — please try again.", 'bot');
+
+        // Once the workflow reports a captured lead (contact info detected), end the chat
+        if (data.leadCaptured) {
+          input.disabled = true;
+          sendBtn.disabled = true;
+          addMessage('— chat ended —', 'ended');
+          endChat();
+          return;
+        }
+      } catch (err) {
+        typingEl.remove();
+        addMessage("Sorry, something went wrong — please try again.", 'bot');
+      }
+      sendBtn.disabled = false;
+    }
+
+    sendBtn.addEventListener('click', sendMessage);
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') sendMessage();
+    });
+  </script>
+</body>
+</html>
