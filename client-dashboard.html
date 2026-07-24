@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Client Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Inter', sans-serif;
+    background-color: #0B0A09;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+    background-size: 72px 72px;
+    color: #F5F4F2;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+  .container { max-width: 1100px; margin: 0 auto; padding: 40px 24px 64px; }
+  @media (max-width: 700px) { .container { padding: 28px 16px 48px; } }
+
+  header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 28px; }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .logo-mark {
+    width: 38px; height: 38px; border-radius: 50%; background: #F4622E;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 14px; color: #0B0A09; flex-shrink: 0;
+  }
+  .brand-text h1 { font-size: 19px; font-weight: 700; letter-spacing: -0.01em; }
+  .brand-text .sub { font-size: 12.5px; color: #8F8A84; }
+
+  .status-pill {
+    display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 999px;
+    font-size: 12.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .status-pill.active { background: rgba(94,201,120,0.15); color: #5EC978; }
+  .status-pill.paused { background: rgba(244,98,46,0.15); color: #F4622E; }
+  .status-pill .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+
+  .paused-banner {
+    background: rgba(244,98,46,0.08); border: 1px solid #F4622E; border-radius: 12px;
+    padding: 14px 18px; margin-bottom: 24px; font-size: 13.5px; display: none;
+  }
+  .paused-banner.show { display: block; }
+  .paused-banner strong { color: #F4622E; }
+
+  .grid-2 { display: grid; grid-template-columns: 1.3fr 1fr; gap: 16px; margin-bottom: 28px; }
+  @media (max-width: 800px) { .grid-2 { grid-template-columns: 1fr; } }
+
+  .card {
+    background: #161412; border: 1px solid rgba(255,255,255,0.07); border-radius: 14px; padding: 20px 22px;
+  }
+  .card h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.06em; color: #8F8A84; font-weight: 700; margin-bottom: 14px; }
+
+  .billing-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 13.5px; }
+  .billing-row:last-of-type { border-bottom: none; }
+  .billing-row .label { color: #8F8A84; }
+  .billing-row .value { font-weight: 600; }
+  .billing-amount { font-size: 26px; font-weight: 800; letter-spacing: -0.02em; margin: 4px 0 14px; }
+  .billing-amount span { font-size: 13px; color: #8F8A84; font-weight: 600; }
+  .btn-pay {
+    display: inline-block; width: 100%; text-align: center; margin-top: 14px; padding: 12px 16px;
+    border-radius: 10px; background: #F4622E; color: #0B0A09; font-weight: 700; font-size: 13.5px;
+    text-decoration: none; cursor: pointer;
+  }
+  .btn-pay:hover { opacity: 0.92; }
+
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  @media (max-width: 700px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+  .stat-box { text-align: center; padding: 10px 4px; }
+  .stat-box .num { font-size: 24px; font-weight: 800; letter-spacing: -0.02em; }
+  .stat-box .label { font-size: 11px; color: #8F8A84; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; margin-top: 2px; }
+  .stat-box.hot .num { color: #F4622E; }
+  .stat-box.warm .num { color: #E8B84B; }
+  .stat-box.cold .num { color: #7FA8D9; }
+
+  .tabs { display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.07); }
+  .tab-btn {
+    background: none; border: none; color: #8F8A84; font-family: inherit; font-size: 13.5px; font-weight: 600;
+    padding: 10px 16px; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px;
+  }
+  .tab-btn.active { color: #F5F4F2; border-bottom-color: #F4622E; }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  .filter-row { margin-bottom: 14px; display: flex; gap: 10px; flex-wrap: wrap; }
+  #search, #dayFilter {
+    background: #161412; border: 1px solid rgba(255,255,255,0.09); border-radius: 8px;
+    padding: 8px 12px; color: #F5F4F2; font-size: 12.5px; font-family: inherit;
+  }
+  #search { width: 200px; }
+  #dayFilter { cursor: pointer; }
+  #search::placeholder { color: #6B665F; }
+  #search:focus, #dayFilter:focus { outline: none; border-color: #F4622E; }
+
+  .table-wrap { background: #161412; border: 1px solid rgba(255,255,255,0.07); border-radius: 16px; overflow: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  thead th {
+    text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;
+    color: #8F8A84; font-weight: 700; padding: 9px 10px; border-bottom: 1px solid rgba(255,255,255,0.07); white-space: nowrap;
+  }
+  tbody td { padding: 9px 10px; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 12px; vertical-align: top; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: rgba(255,255,255,0.02); }
+  .lead-name { font-weight: 700; font-size: 12.5px; }
+  .lead-contact { color: #A8A39D; font-size: 10.5px; margin-top: 1px; }
+  .lead-contact a { color: #A8A39D; text-decoration: none; }
+  .lead-contact a:hover { color: #F4622E; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; }
+  .badge.hot { background: rgba(244,98,46,0.15); color: #F4622E; }
+  .badge.warm { background: rgba(232,184,75,0.15); color: #E8B84B; }
+  .badge.cold { background: rgba(127,168,217,0.15); color: #7FA8D9; }
+  .message-cell { max-width: 160px; color: #D8D5D1; }
+  .additional-info-cell { max-width: 140px; color: #A8A39D; font-size: 11px; }
+  .additional-info-cell .none { color: #6B665F; font-style: italic; }
+
+  .check-cell { width: 26px; text-align: center; padding-left: 12px !important; padding-right: 4px !important; }
+  .lead-checkbox {
+    width: 15px; height: 15px; border-radius: 5px; border: 1px solid rgba(255,255,255,0.18);
+    background: transparent; cursor: pointer; appearance: none; -webkit-appearance: none;
+    position: relative; vertical-align: middle;
+  }
+  .lead-checkbox:checked { background: #F4622E; border-color: #F4622E; }
+  .lead-checkbox:checked::after {
+    content: "✓"; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -55%);
+    color: #0B0A09; font-size: 10px; font-weight: 800;
+  }
+  tr.handled td { opacity: 0.45; }
+  tr.handled .lead-name { text-decoration: line-through; }
+  .callback-cell { color: #D8D5D1; font-size: 11.5px; min-width: 120px; }
+  .callback-cell .none { color: #6B665F; font-style: italic; }
+  .timestamp-cell { color: #8F8A84; font-size: 11px; white-space: nowrap; }
+
+  .activity-list { list-style: none; }
+  .activity-item { display: flex; gap: 12px; padding: 12px 18px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .activity-list li:last-child { border-bottom: none; }
+  .activity-icon { width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 13px; margin-top: 1px; }
+  .activity-icon.lead_received { background: rgba(244,98,46,0.15); color: #F4622E; }
+  .activity-icon.auto_reply { background: rgba(127,168,217,0.15); color: #7FA8D9; }
+  .activity-icon.owner_notified { background: rgba(232,184,75,0.15); color: #E8B84B; }
+  .activity-body .label { font-size: 13.5px; font-weight: 600; }
+  .activity-body .detail { font-size: 12.5px; color: #A8A39D; margin-top: 2px; }
+  .activity-body .time { font-size: 11.5px; color: #6B665F; margin-top: 3px; }
+
+  .empty-state, .loading-state, .error-state { text-align: center; padding: 64px 24px; color: #8F8A84; font-size: 14px; }
+  .error-state { color: #F4622E; }
+
+  footer { text-align: center; margin-top: 28px; color: #6B665F; font-size: 12px; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <div class="brand">
+      <div class="logo-mark" id="logoMark">--</div>
+      <div class="brand-text">
+        <h1 id="businessName">Loading...</h1>
+        <div class="sub">Your AI Automation Dashboard</div>
+      </div>
+    </div>
+    <span class="status-pill active" id="statusPill"><span class="dot"></span><span id="statusText">Active</span></span>
+  </header>
+
+  <div class="paused-banner" id="pausedBanner">
+    <strong>Your service is currently paused.</strong> Your chat widget and automations are temporarily offline. Please contact us to reactivate.
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <h2>This Period</h2>
+      <div class="stats">
+        <div class="stat-box"><div class="num" id="statTotal">&mdash;</div><div class="label">Total Leads</div></div>
+        <div class="stat-box hot"><div class="num" id="statHot">&mdash;</div><div class="label">Hot</div></div>
+        <div class="stat-box warm"><div class="num" id="statWarm">&mdash;</div><div class="label">Warm</div></div>
+        <div class="stat-box cold"><div class="num" id="statCold">&mdash;</div><div class="label">Cold</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Billing</h2>
+      <div class="billing-amount"><span id="planName">&mdash;</span></div>
+      <div class="billing-row"><span class="label">Monthly rate</span><span class="value" id="monthlyRate">&mdash;</span></div>
+      <div class="billing-row"><span class="label">Next payment</span><span class="value" id="nextPayment">&mdash;</span></div>
+      <div class="billing-row"><span class="label">Status</span><span class="value" id="billingStatus">&mdash;</span></div>
+      <a class="btn-pay" id="payBtn" href="#">Contact Us to Pay / Update Billing</a>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="leads">Leads</button>
+    <button class="tab-btn" data-tab="activity">Activity Log</button>
+  </div>
+
+  <div class="tab-panel active" id="tab-leads">
+    <div class="filter-row">
+      <select id="dayFilter"><option value="all">All Days</option></select>
+      <input type="text" id="search" placeholder="Search leads...">
+    </div>
+    <div class="table-wrap">
+      <div id="leadsContent"><div class="loading-state">Loading leads...</div></div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="tab-activity">
+    <div class="table-wrap">
+      <div id="activityContent"><div class="loading-state">Loading activity...</div></div>
+    </div>
+  </div>
+
+  <footer>Powered by your AI automation system &middot; last refreshed <span id="lastRefreshed">just now</span></footer>
+</div>
+
+<script>
+  const API_URL = "https://jasonweng.app.n8n.cloud/webhook/client-portal";
+  const CONTACT_EMAIL = "jason.weng@jwengenterprises.com";
+
+  function getKeyFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('key') || '';
+  }
+  const CLIENT_KEY = getKeyFromUrl();
+
+  let allLeads = [];
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str || '';
+    return div.innerHTML;
+  }
+
+  function formatTimestamp(ts) {
+    if (!ts) return '';
+    const d = new Date(ts);
+    if (isNaN(d.getTime())) return ts;
+    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) +
+      ' ' + d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  }
+
+  function formatDate(ds) {
+    if (!ds) return 'N/A';
+    const d = new Date(ds + 'T00:00:00');
+    if (isNaN(d.getTime())) return ds;
+    return d.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' });
+  }
+
+  function dayKey(ts) {
+    if (!ts) return 'unknown';
+    const d = new Date(ts);
+    if (isNaN(d.getTime())) return 'unknown';
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+
+  function populateDayFilter(leads) {
+    const select = document.getElementById('dayFilter');
+    const prevValue = select.value || 'all';
+
+    const todayKey = dayKey(new Date().toISOString());
+    const yestKey = dayKey(new Date(Date.now() - 86400000).toISOString());
+
+    const keys = Array.from(new Set(leads.map(l => dayKey(l.timestamp)))).filter(k => k !== 'unknown');
+    keys.sort().reverse();
+
+    const options = ['<option value="all">All Days</option>'];
+    keys.forEach(k => {
+      let label;
+      if (k === todayKey) label = 'Today (' + k + ')';
+      else if (k === yestKey) label = 'Yesterday (' + k + ')';
+      else {
+        const d = new Date(k + 'T00:00:00');
+        label = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+      }
+      options.push('<option value="' + k + '">' + label + '</option>');
+    });
+    select.innerHTML = options.join('');
+
+    if (keys.includes(prevValue) || prevValue === 'all') select.value = prevValue;
+    else select.value = 'all';
+  }
+
+  function renderClientInfo(client) {
+    document.getElementById('businessName').textContent = client.businessName || 'Your Business';
+    const initials = (client.businessName || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+    document.getElementById('logoMark').textContent = initials;
+
+    const isActive = (client.status || '').toLowerCase() === 'active';
+    const pill = document.getElementById('statusPill');
+    pill.className = 'status-pill ' + (isActive ? 'active' : 'paused');
+    document.getElementById('statusText').textContent = isActive ? 'Active' : 'Paused';
+    document.getElementById('pausedBanner').classList.toggle('show', !isActive);
+
+    document.getElementById('planName').textContent = client.plan ? (client.plan + ' Plan') : 'No Plan';
+    document.getElementById('monthlyRate').textContent = client.monthlyRate ? ('$' + client.monthlyRate.toLocaleString() + '/mo') : 'N/A';
+    document.getElementById('nextPayment').textContent = formatDate(client.nextPaymentDate);
+    document.getElementById('billingStatus').textContent = isActive ? 'Current' : 'Paused / Action Needed';
+
+    const payBtn = document.getElementById('payBtn');
+    payBtn.href = 'mailto:' + CONTACT_EMAIL + '?subject=' + encodeURIComponent('Billing question - ' + (client.businessName || '')) + '&body=' + encodeURIComponent('Hi, I have a question about my billing / would like to make a payment.');
+  }
+
+  function renderStats(stats) {
+    document.getElementById('statTotal').textContent = stats.total;
+    document.getElementById('statHot').textContent = stats.hot;
+    document.getElementById('statWarm').textContent = stats.warm;
+    document.getElementById('statCold').textContent = stats.cold;
+  }
+
+  function leadId(l) {
+    return [l.timestamp, l.email, l.phone, l.name].join('|');
+  }
+
+  function getHandledSet() {
+    try {
+      const raw = localStorage.getItem('handledLeads_' + CLIENT_KEY);
+      return new Set(raw ? JSON.parse(raw) : []);
+    } catch (e) { return new Set(); }
+  }
+
+  function saveHandledSet(set) {
+    try { localStorage.setItem('handledLeads_' + CLIENT_KEY, JSON.stringify(Array.from(set))); } catch (e) {}
+  }
+
+  function renderLeadsTable(leads) {
+    const content = document.getElementById('leadsContent');
+    if (!leads.length) {
+      content.innerHTML = '<div class="empty-state">No leads yet &mdash; new leads from your chat widget will show up here automatically.</div>';
+      return;
+    }
+    const handled = getHandledSet();
+    const rows = leads.map(l => {
+      const id = leadId(l);
+      const isHandled = handled.has(id);
+      return `
+      <tr class="${isHandled ? 'handled' : ''}" data-lead-id="${escapeHtml(id)}">
+        <td class="check-cell"><input type="checkbox" class="lead-checkbox" ${isHandled ? 'checked' : ''} title="Mark as handled"></td>
+        <td>
+          <div class="lead-name">${escapeHtml(l.name) || '(no name)'}</div>
+          <div class="lead-contact">
+            ${l.email ? `<a href="mailto:${escapeHtml(l.email)}">${escapeHtml(l.email)}</a>` : ''}
+            ${l.email && l.phone ? ' &middot; ' : ''}
+            ${l.phone ? `<a href="tel:${escapeHtml(l.phone)}">${escapeHtml(l.phone)}</a>` : ''}
+          </div>
+        </td>
+        <td><span class="badge ${l.qualification}">${l.qualification}</span></td>
+        <td class="message-cell">${escapeHtml(l.message || l.reason)}</td>
+        <td class="additional-info-cell">${l.additionalInfo ? escapeHtml(l.additionalInfo) : '<span class="none">&mdash;</span>'}</td>
+        <td class="callback-cell">${l.callbackTime ? escapeHtml(l.callbackTime) : '<span class="none">Not scheduled</span>'}</td>
+        <td class="timestamp-cell">${formatTimestamp(l.timestamp)}</td>
+      </tr>
+    `;
+    }).join('');
+    content.innerHTML = `
+      <table>
+        <thead><tr><th></th><th>Lead</th><th>Qualification</th><th>Problem</th><th>Additional Info</th><th>Callback Time</th><th>Received</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+
+    content.querySelectorAll('.lead-checkbox').forEach(cb => {
+      cb.addEventListener('change', (e) => {
+        const row = e.target.closest('tr');
+        const id = row.dataset.leadId;
+        const set = getHandledSet();
+        if (e.target.checked) { set.add(id); row.classList.add('handled'); }
+        else { set.delete(id); row.classList.remove('handled'); }
+        saveHandledSet(set);
+      });
+    });
+  }
+
+  function renderActivity(activity) {
+    const content = document.getElementById('activityContent');
+    if (!activity || !activity.length) {
+      content.innerHTML = '<div class="empty-state">No activity yet.</div>';
+      return;
+    }
+    const icons = { lead_received: '&#9679;', auto_reply: '&#9993;', owner_notified: '&#128276;' };
+    const items = activity.map(a => `
+      <li class="activity-item">
+        <div class="activity-icon ${a.type}">${icons[a.type] || '&#9679;'}</div>
+        <div class="activity-body">
+          <div class="label">${escapeHtml(a.label)}</div>
+          <div class="detail">${escapeHtml(a.detail)}</div>
+          <div class="time">${formatTimestamp(a.timestamp)}</div>
+        </div>
+      </li>
+    `).join('');
+    content.innerHTML = `<ul class="activity-list">${items}</ul>`;
+  }
+
+  function applyFilters() {
+    const q = document.getElementById('search').value.trim().toLowerCase();
+    const day = document.getElementById('dayFilter').value || 'all';
+    let filtered = allLeads;
+    if (day !== 'all') filtered = filtered.filter(l => dayKey(l.timestamp) === day);
+    if (q) {
+      filtered = filtered.filter(l =>
+        (l.name || '').toLowerCase().includes(q) ||
+        (l.email || '').toLowerCase().includes(q) ||
+        (l.phone || '').toLowerCase().includes(q) ||
+        (l.message || '').toLowerCase().includes(q) ||
+        (l.qualification || '').toLowerCase().includes(q) ||
+        (l.additionalInfo || '').toLowerCase().includes(q)
+      );
+    }
+    renderLeadsTable(filtered);
+  }
+
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    });
+  });
+
+  async function loadDashboard() {
+    if (!CLIENT_KEY) {
+      document.getElementById('leadsContent').innerHTML = '<div class="error-state">No access key provided. Please use the link given to you.</div>';
+      return;
+    }
+    try {
+      const url = API_URL + '?key=' + encodeURIComponent(CLIENT_KEY);
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('Not found');
+      const data = await res.json();
+      renderClientInfo(data.client || {});
+      renderStats(data.stats || { total: 0, hot: 0, warm: 0, cold: 0 });
+      allLeads = data.leads || [];
+      populateDayFilter(allLeads);
+      applyFilters();
+      renderActivity(data.activity || []);
+      document.getElementById('lastRefreshed').textContent = new Date().toLocaleTimeString();
+    } catch (err) {
+      document.getElementById('leadsContent').innerHTML = '<div class="error-state">Couldn\'t load your dashboard. Please check your link or contact us.</div>';
+    }
+  }
+
+  document.getElementById('search').addEventListener('input', applyFilters);
+  document.getElementById('dayFilter').addEventListener('change', applyFilters);
+
+  loadDashboard();
+  setInterval(loadDashboard, 60000);
+</script>
+</body>
+</html>

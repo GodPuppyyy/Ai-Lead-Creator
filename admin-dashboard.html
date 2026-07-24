@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Inter', sans-serif;
+    background-color: #0B0A09;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+    background-size: 72px 72px;
+    color: #F5F4F2;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+  .container { max-width: 1180px; margin: 0 auto; padding: 40px 24px 64px; }
+  @media (max-width: 700px) { .container { padding: 28px 16px 48px; } }
+
+  header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 28px; }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .logo-mark {
+    width: 38px; height: 38px; border-radius: 50%; background: #F4622E;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 14px; color: #0B0A09; flex-shrink: 0;
+  }
+  .brand-text h1 { font-size: 19px; font-weight: 700; letter-spacing: -0.01em; }
+  .brand-text .sub { font-size: 12.5px; color: #8F8A84; }
+
+  .btn-refresh {
+    background: #161412; border: 1px solid rgba(255,255,255,0.09); border-radius: 8px;
+    padding: 9px 14px; color: #F5F4F2; font-size: 13px; font-weight: 600; cursor: pointer;
+  }
+  .btn-refresh:hover { border-color: #F4622E; }
+
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 28px; }
+  @media (max-width: 700px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+  .stat-card { background: #161412; border: 1px solid rgba(255,255,255,0.07); border-radius: 14px; padding: 18px 20px; }
+  .stat-card .num { font-size: 26px; font-weight: 800; letter-spacing: -0.02em; }
+  .stat-card .label { font-size: 11.5px; color: #8F8A84; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; margin-top: 4px; }
+  .stat-card.active .num { color: #5EC978; }
+  .stat-card.paused .num { color: #F4622E; }
+  .stat-card.mrr .num { color: #F4622E; }
+
+  .table-wrap { background: #161412; border: 1px solid rgba(255,255,255,0.07); border-radius: 16px; overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    text-align: left; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.06em;
+    color: #8F8A84; font-weight: 700; padding: 14px 18px; border-bottom: 1px solid rgba(255,255,255,0.07); white-space: nowrap;
+  }
+  tbody td { padding: 16px 18px; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 13.5px; vertical-align: middle; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: rgba(255,255,255,0.02); }
+  .client-name { font-weight: 700; font-size: 14px; }
+  .client-contact { color: #A8A39D; font-size: 12.5px; margin-top: 2px; }
+  .client-contact a { color: #A8A39D; text-decoration: none; }
+  .client-contact a:hover { color: #F4622E; }
+
+  .status-pill {
+    display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 999px;
+    font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .status-pill.active { background: rgba(94,201,120,0.15); color: #5EC978; }
+  .status-pill.paused { background: rgba(244,98,46,0.15); color: #F4622E; }
+  .status-pill .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+  .toggle-switch {
+    position: relative; display: inline-block; width: 42px; height: 24px; cursor: pointer; vertical-align: middle;
+  }
+  .toggle-switch input { display: none; }
+  .toggle-track {
+    position: absolute; inset: 0; background: rgba(255,255,255,0.12); border-radius: 999px; transition: background 0.15s;
+  }
+  .toggle-switch input:checked + .toggle-track { background: #5EC978; }
+  .toggle-thumb {
+    position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #F5F4F2;
+    transition: transform 0.15s;
+  }
+  .toggle-switch input:checked ~ .toggle-thumb { transform: translateX(18px); }
+
+  .btn-view {
+    display: inline-block; padding: 7px 14px; border-radius: 8px; background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.09); color: #F5F4F2; font-size: 12.5px; font-weight: 600;
+    text-decoration: none; white-space: nowrap;
+  }
+  .btn-view:hover { border-color: #F4622E; color: #F4622E; }
+
+  .empty-state, .loading-state, .error-state { text-align: center; padding: 64px 24px; color: #8F8A84; font-size: 14px; }
+  .error-state { color: #F4622E; }
+
+  footer { text-align: center; margin-top: 28px; color: #6B665F; font-size: 12px; }
+
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: #161412; border: 1px solid #F4622E; color: #F5F4F2; padding: 10px 20px; border-radius: 10px;
+    font-size: 13px; font-weight: 600; opacity: 0; pointer-events: none; transition: all 0.2s;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <div class="brand">
+      <div class="logo-mark">JW</div>
+      <div class="brand-text">
+        <h1>Admin &mdash; All Clients</h1>
+        <div class="sub">Jason Weng &middot; Master Control</div>
+      </div>
+    </div>
+    <button class="btn-refresh" id="refreshBtn">Refresh</button>
+  </header>
+
+  <div class="stats">
+    <div class="stat-card"><div class="num" id="statTotalClients">&mdash;</div><div class="label">Total Clients</div></div>
+    <div class="stat-card active"><div class="num" id="statActiveClients">&mdash;</div><div class="label">Active</div></div>
+    <div class="stat-card paused"><div class="num" id="statPausedClients">&mdash;</div><div class="label">Paused</div></div>
+    <div class="stat-card mrr"><div class="num" id="statMRR">&mdash;</div><div class="label">Monthly Revenue</div></div>
+  </div>
+
+  <div class="table-wrap">
+    <div id="content"><div class="loading-state">Loading clients...</div></div>
+  </div>
+
+  <footer>Toggle a client off to immediately pause their chat widget and automations &middot; last refreshed <span id="lastRefreshed">just now</span></footer>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const ADMIN_LIST_URL = "https://jasonweng.app.n8n.cloud/webhook/admin-portal";
+  const ADMIN_TOGGLE_URL = "https://jasonweng.app.n8n.cloud/webhook/admin-toggle";
+  const ADMIN_KEY = "9f3b7e2a5d8c41f0b6a3e9d7c2f5b810";
+  const CLIENT_DASHBOARD_BASE = "client-dashboard.html";
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str || '';
+    return div.innerHTML;
+  }
+
+  function showToast(msg) {
+    const toast = document.getElementById('toast');
+    toast.textContent = msg;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2200);
+  }
+
+  function renderStats(clients) {
+    const active = clients.filter(c => (c.status || '').toLowerCase() === 'active');
+    const paused = clients.filter(c => (c.status || '').toLowerCase() !== 'active');
+    const mrr = active.reduce((sum, c) => sum + (Number(c.monthlyRate) || 0), 0);
+    document.getElementById('statTotalClients').textContent = clients.length;
+    document.getElementById('statActiveClients').textContent = active.length;
+    document.getElementById('statPausedClients').textContent = paused.length;
+    document.getElementById('statMRR').textContent = '$' + mrr.toLocaleString();
+  }
+
+  function renderTable(clients) {
+    const content = document.getElementById('content');
+    if (!clients.length) {
+      content.innerHTML = '<div class="empty-state">No clients yet.</div>';
+      return;
+    }
+    const rows = clients.map(c => {
+      const isActive = (c.status || '').toLowerCase() === 'active';
+      const dashboardUrl = CLIENT_DASHBOARD_BASE + '?key=' + encodeURIComponent(c.clientKey);
+      return `
+      <tr data-key="${escapeHtml(c.clientKey)}">
+        <td>
+          <div class="client-name">${escapeHtml(c.businessName) || '(unnamed)'}</div>
+          <div class="client-contact">
+            ${c.contactEmail ? `<a href="mailto:${escapeHtml(c.contactEmail)}">${escapeHtml(c.contactEmail)}</a>` : ''}
+          </div>
+        </td>
+        <td>${escapeHtml(c.plan) || '&mdash;'}</td>
+        <td>${c.monthlyRate ? '$' + Number(c.monthlyRate).toLocaleString() + '/mo' : '&mdash;'}</td>
+        <td>${escapeHtml(c.nextPaymentDate) || '&mdash;'}</td>
+        <td>
+          <span class="status-pill ${isActive ? 'active' : 'paused'}">
+            <span class="dot"></span>${isActive ? 'Active' : 'Paused'}
+          </span>
+        </td>
+        <td>
+          <label class="toggle-switch">
+            <input type="checkbox" class="status-toggle" ${isActive ? 'checked' : ''} data-key="${escapeHtml(c.clientKey)}">
+            <span class="toggle-track"></span>
+            <span class="toggle-thumb"></span>
+          </label>
+        </td>
+        <td><a class="btn-view" href="${dashboardUrl}" target="_blank">View Dashboard &rarr;</a></td>
+      </tr>`;
+    }).join('');
+    content.innerHTML = `
+      <table>
+        <thead>
+          <tr><th>Client</th><th>Plan</th><th>Rate</th><th>Next Payment</th><th>Status</th><th>On / Off</th><th></th></tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+
+    document.querySelectorAll('.status-toggle').forEach(toggle => {
+      toggle.addEventListener('change', async (e) => {
+        const key = e.target.dataset.key;
+        const newStatus = e.target.checked ? 'active' : 'paused';
+        e.target.disabled = true;
+        try {
+          const url = ADMIN_TOGGLE_URL + '?key=' + encodeURIComponent(ADMIN_KEY) + '&clientKey=' + encodeURIComponent(key) + '&status=' + encodeURIComponent(newStatus);
+          const res = await fetch(url);
+          const data = await res.json();
+          if (data.success) {
+            showToast(newStatus === 'active' ? 'Client turned ON' : 'Client turned OFF');
+            loadClients();
+          } else {
+            showToast('Something went wrong');
+            e.target.checked = !e.target.checked;
+          }
+        } catch (err) {
+          showToast('Something went wrong');
+          e.target.checked = !e.target.checked;
+        }
+        e.target.disabled = false;
+      });
+    });
+  }
+
+  async function loadClients() {
+    try {
+      const url = ADMIN_LIST_URL + '?key=' + encodeURIComponent(ADMIN_KEY);
+      const res = await fetch(url);
+      const data = await res.json();
+      const clients = data.clients || [];
+      renderStats(clients);
+      renderTable(clients);
+      document.getElementById('lastRefreshed').textContent = new Date().toLocaleTimeString();
+    } catch (err) {
+      document.getElementById('content').innerHTML = '<div class="error-state">Couldn\'t load clients — please refresh and try again.</div>';
+    }
+  }
+
+  document.getElementById('refreshBtn').addEventListener('click', loadClients);
+  loadClients();
+</script>
+</body>
+</html>

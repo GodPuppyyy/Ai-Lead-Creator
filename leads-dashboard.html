@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Leads Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Inter', sans-serif;
+    background-color: #0B0A09;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+    background-size: 72px 72px;
+    color: #F5F4F2;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+  .container { max-width: 1100px; margin: 0 auto; padding: 40px 24px 64px; }
+  @media (max-width: 700px) { .container { padding: 28px 16px 48px; } }
+
+  header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 32px; }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .logo-mark {
+    width: 38px; height: 38px; border-radius: 50%; background: #F4622E;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 14px; color: #0B0A09; flex-shrink: 0;
+  }
+  .brand-text h1 { font-size: 18px; font-weight: 700; letter-spacing: -0.01em; }
+  .brand-text .sub { font-size: 12.5px; color: #8F8A84; }
+
+  .controls { display: flex; align-items: center; gap: 10px; }
+  #search {
+    background: #161412; border: 1px solid rgba(255,255,255,0.09); border-radius: 8px;
+    padding: 9px 14px; color: #F5F4F2; font-size: 13.5px; font-family: inherit; width: 200px;
+  }
+  #search::placeholder { color: #6B665F; }
+  #search:focus { outline: none; border-color: #F4622E; }
+  .btn-refresh {
+    background: #161412; border: 1px solid rgba(255,255,255,0.09); border-radius: 8px;
+    padding: 9px 14px; color: #F5F4F2; font-size: 13px; font-weight: 600; cursor: pointer;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .btn-refresh:hover { border-color: #F4622E; }
+  .btn-refresh.spinning svg { animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 28px; }
+  @media (max-width: 700px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+  .stat-card {
+    background: #161412; border: 1px solid rgba(255,255,255,0.07); border-radius: 14px;
+    padding: 18px 20px;
+  }
+  .stat-card .num { font-size: 28px; font-weight: 800; letter-spacing: -0.02em; }
+  .stat-card .label { font-size: 12px; color: #8F8A84; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; margin-top: 4px; }
+  .stat-card.hot .num { color: #F4622E; }
+  .stat-card.warm .num { color: #E8B84B; }
+  .stat-card.cold .num { color: #7FA8D9; }
+
+  .table-wrap {
+    background: #161412; border: 1px solid rgba(255,255,255,0.07); border-radius: 16px;
+    overflow: hidden;
+  }
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    text-align: left; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.06em;
+    color: #8F8A84; font-weight: 700; padding: 14px 18px; border-bottom: 1px solid rgba(255,255,255,0.07);
+    white-space: nowrap;
+  }
+  tbody td { padding: 16px 18px; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 13.5px; vertical-align: top; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: rgba(255,255,255,0.02); }
+  .lead-name { font-weight: 700; font-size: 14px; }
+  .lead-contact { color: #A8A39D; font-size: 12.5px; margin-top: 2px; }
+  .lead-contact a { color: #A8A39D; text-decoration: none; }
+  .lead-contact a:hover { color: #F4622E; }
+  .badge {
+    display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 11px;
+    font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .badge.hot { background: rgba(244,98,46,0.15); color: #F4622E; }
+  .badge.warm { background: rgba(232,184,75,0.15); color: #E8B84B; }
+  .badge.cold { background: rgba(127,168,217,0.15); color: #7FA8D9; }
+  .message-cell { max-width: 280px; color: #D8D5D1; }
+  .callback-cell { color: #D8D5D1; font-size: 13px; min-width: 180px; }
+  .callback-cell .none { color: #6B665F; font-style: italic; }
+  .timestamp-cell { color: #8F8A84; font-size: 12.5px; white-space: nowrap; }
+
+  .empty-state, .loading-state, .error-state {
+    text-align: center; padding: 64px 24px; color: #8F8A84; font-size: 14px;
+  }
+  .error-state { color: #F4622E; }
+
+  footer { text-align: center; margin-top: 28px; color: #6B665F; font-size: 12px; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <div class="brand">
+      <div class="logo-mark">JW</div>
+      <div class="brand-text">
+        <h1>Live Leads Dashboard</h1>
+        <div class="sub">Jason Weng &middot; AI Automation for Local Businesses</div>
+      </div>
+    </div>
+    <div class="controls">
+      <input type="text" id="search" placeholder="Search leads...">
+      <button class="btn-refresh" id="refreshBtn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+        </svg>
+        Refresh
+      </button>
+    </div>
+  </header>
+
+  <div class="stats">
+    <div class="stat-card"><div class="num" id="statTotal">&mdash;</div><div class="label">Total Leads</div></div>
+    <div class="stat-card hot"><div class="num" id="statHot">&mdash;</div><div class="label">Hot</div></div>
+    <div class="stat-card warm"><div class="num" id="statWarm">&mdash;</div><div class="label">Warm</div></div>
+    <div class="stat-card cold"><div class="num" id="statCold">&mdash;</div><div class="label">Cold</div></div>
+  </div>
+
+  <div class="table-wrap">
+    <div id="content">
+      <div class="loading-state">Loading leads...</div>
+    </div>
+  </div>
+
+  <footer>Updates in real time from your live chat widget &middot; last refreshed <span id="lastRefreshed">just now</span></footer>
+</div>
+
+<script>
+  const DASHBOARD_API_URL = "https://jasonweng.app.n8n.cloud/webhook/leads-dashboard";
+  const DASHBOARD_API_KEY = "5e91be8c1eac158436af1cb9412df126";
+
+  let allLeads = [];
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str || '';
+    return div.innerHTML;
+  }
+
+  function formatTimestamp(ts) {
+    if (!ts) return '';
+    const d = new Date(ts);
+    if (isNaN(d.getTime())) return ts;
+    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) +
+      ' ' + d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  }
+
+  function renderStats(stats) {
+    document.getElementById('statTotal').textContent = stats.total;
+    document.getElementById('statHot').textContent = stats.hot;
+    document.getElementById('statWarm').textContent = stats.warm;
+    document.getElementById('statCold').textContent = stats.cold;
+  }
+
+  function renderTable(leads) {
+    const content = document.getElementById('content');
+    if (!leads.length) {
+      content.innerHTML = '<div class="empty-state">No leads yet — new leads from your chat widget will show up here automatically.</div>';
+      return;
+    }
+    const rows = leads.map(l => `
+      <tr>
+        <td>
+          <div class="lead-name">${escapeHtml(l.name) || '(no name)'}</div>
+          <div class="lead-contact">
+            ${l.email ? `<a href="mailto:${escapeHtml(l.email)}">${escapeHtml(l.email)}</a>` : ''}
+            ${l.email && l.phone ? ' &middot; ' : ''}
+            ${l.phone ? `<a href="tel:${escapeHtml(l.phone)}">${escapeHtml(l.phone)}</a>` : ''}
+          </div>
+        </td>
+        <td><span class="badge ${l.qualification}">${l.qualification}</span></td>
+        <td class="message-cell">${escapeHtml(l.message || l.reason)}</td>
+        <td class="callback-cell">${l.callbackTime ? escapeHtml(l.callbackTime) : '<span class="none">Not scheduled</span>'}</td>
+        <td class="timestamp-cell">${formatTimestamp(l.timestamp)}</td>
+      </tr>
+    `).join('');
+    content.innerHTML = `
+      <table>
+        <thead>
+          <tr>
+            <th>Lead</th>
+            <th>Qualification</th>
+            <th>Problem</th>
+            <th>Callback Time</th>
+            <th>Received</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    `;
+  }
+
+  function applySearch() {
+    const q = document.getElementById('search').value.trim().toLowerCase();
+    if (!q) { renderTable(allLeads); return; }
+    const filtered = allLeads.filter(l =>
+      (l.name || '').toLowerCase().includes(q) ||
+      (l.email || '').toLowerCase().includes(q) ||
+      (l.phone || '').toLowerCase().includes(q) ||
+      (l.message || '').toLowerCase().includes(q) ||
+      (l.qualification || '').toLowerCase().includes(q)
+    );
+    renderTable(filtered);
+  }
+
+  async function loadDashboard() {
+    const refreshBtn = document.getElementById('refreshBtn');
+    refreshBtn.classList.add('spinning');
+    try {
+      const url = DASHBOARD_API_URL + '?key=' + encodeURIComponent(DASHBOARD_API_KEY);
+      const res = await fetch(url);
+      const data = await res.json();
+      renderStats(data.stats || { total: 0, hot: 0, warm: 0, cold: 0 });
+      allLeads = data.leads || [];
+      applySearch();
+      document.getElementById('lastRefreshed').textContent = new Date().toLocaleTimeString();
+    } catch (err) {
+      document.getElementById('content').innerHTML = '<div class="error-state">Couldn\'t load leads — please refresh and try again.</div>';
+    }
+    refreshBtn.classList.remove('spinning');
+  }
+
+  document.getElementById('refreshBtn').addEventListener('click', loadDashboard);
+  document.getElementById('search').addEventListener('input', applySearch);
+
+  loadDashboard();
+  setInterval(loadDashboard, 60000);
+</script>
+</body>
+</html>
