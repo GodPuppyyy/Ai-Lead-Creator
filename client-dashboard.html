@@ -148,6 +148,42 @@
   .empty-state, .loading-state, .error-state { text-align: center; padding: 64px 24px; color: #8F8A84; font-size: 14px; }
   .error-state { color: #F4622E; }
 
+  .sched-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 800px) { .sched-grid { grid-template-columns: 1fr; } }
+  .sched-card h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.06em; color: #8F8A84; font-weight: 700; margin-bottom: 12px; }
+  .add-slot-form { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+  .add-slot-form input {
+    background: #0F0E0D; border: 1px solid rgba(255,255,255,0.09); border-radius: 8px;
+    padding: 8px 10px; color: #F5F4F2; font-size: 12.5px; font-family: inherit;
+  }
+  .add-slot-form input::placeholder { color: #6B665F; }
+  .add-slot-form input:focus { outline: none; border-color: #F4622E; }
+  .add-slot-form input[type="date"] { width: 138px; }
+  .add-slot-form input[type="time"] { width: 100px; }
+  .add-slot-form input[name="label"] { flex: 1; min-width: 100px; }
+  .btn-add-slot {
+    background: #F4622E; color: #0B0A09; border: none; border-radius: 8px; padding: 8px 16px;
+    font-size: 12.5px; font-weight: 700; font-family: inherit; cursor: pointer;
+  }
+  .btn-add-slot:hover { opacity: 0.9; }
+  .slot-list, .appt-list { list-style: none; display: flex; flex-direction: column; gap: 8px; max-height: 420px; overflow-y: auto; }
+  .slot-item, .appt-item {
+    display: flex; justify-content: space-between; align-items: center; gap: 10px;
+    background: #0F0E0D; border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 10px 12px;
+  }
+  .slot-item .slot-when, .appt-item .appt-when { font-size: 13px; font-weight: 700; }
+  .slot-item .slot-label, .appt-item .appt-who { font-size: 11.5px; color: #A8A39D; margin-top: 2px; }
+  .btn-delete-slot {
+    background: none; border: 1px solid rgba(255,255,255,0.12); color: #8F8A84; border-radius: 7px;
+    width: 26px; height: 26px; cursor: pointer; font-size: 13px; flex-shrink: 0;
+  }
+  .btn-delete-slot:hover { border-color: #F4622E; color: #F4622E; }
+  .appt-status-badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; flex-shrink: 0; }
+  .appt-status-badge.confirmed { background: rgba(94,201,120,0.15); color: #5EC978; }
+  .appt-status-badge.pending_confirmation { background: rgba(232,184,75,0.15); color: #E8B84B; }
+  .appt-status-badge.reschedule_requested { background: rgba(244,98,46,0.15); color: #F4622E; }
+  .appt-status-badge.canceled { background: rgba(139,139,139,0.15); color: #8F8A84; }
+
   footer { text-align: center; margin-top: 28px; color: #6B665F; font-size: 12px; }
 </style>
 </head>
@@ -192,6 +228,7 @@
   <div class="tabs">
     <button class="tab-btn active" data-tab="leads">Leads</button>
     <button class="tab-btn" data-tab="activity">Activity Log</button>
+    <button class="tab-btn" data-tab="scheduling">Scheduling</button>
   </div>
 
   <div class="tab-panel active" id="tab-leads">
@@ -207,6 +244,26 @@
   <div class="tab-panel" id="tab-activity">
     <div class="table-wrap">
       <div id="activityContent"><div class="loading-state">Loading activity...</div></div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="tab-scheduling">
+    <div class="sched-grid">
+      <div class="card sched-card">
+        <h3>Your Availability</h3>
+        <form class="add-slot-form" id="addSlotForm">
+          <input type="date" name="date" id="slotDate" required>
+          <input type="time" name="startTime" id="slotStart" required>
+          <input type="time" name="endTime" id="slotEnd" required>
+          <input type="text" name="label" id="slotLabel" placeholder="Note (optional)">
+          <button type="submit" class="btn-add-slot">Add Slot</button>
+        </form>
+        <ul class="slot-list" id="slotList"><div class="loading-state">Loading availability...</div></ul>
+      </div>
+      <div class="card sched-card">
+        <h3>Booked Appointments</h3>
+        <ul class="appt-list" id="apptList"><div class="loading-state">Loading appointments...</div></ul>
+      </div>
     </div>
   </div>
 
@@ -441,8 +498,108 @@
   document.getElementById('search').addEventListener('input', applyFilters);
   document.getElementById('dayFilter').addEventListener('change', applyFilters);
 
+  // ---- Scheduling tab ----
+  const SCHEDULING_API_URL = "https://jasonweng.app.n8n.cloud/webhook/a9140b5f-6290-4d76-b1f0-8238baacbfad/scheduling";
+
+  function formatSlotWhen(dateStr, startTime, endTime) {
+    let dLabel = dateStr;
+    const d = new Date(dateStr + 'T00:00:00');
+    if (!isNaN(d.getTime())) {
+      dLabel = d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+    }
+    return dLabel + ' &middot; ' + (startTime || '') + (endTime ? '&ndash;' + endTime : '');
+  }
+
+  function renderSlotList(rows) {
+    const list = document.getElementById('slotList');
+    if (!rows || !rows.length) {
+      list.innerHTML = '<div class="empty-state">No open slots yet &mdash; add one above.</div>';
+      return;
+    }
+    const sorted = rows.slice().sort((a, b) => (a.date + (a.startTime || '')).localeCompare(b.date + (b.startTime || '')));
+    list.innerHTML = sorted.map(s => `
+      <li class="slot-item" data-slot-id="${escapeHtml(s.slotId)}">
+        <div>
+          <div class="slot-when">${formatSlotWhen(s.date, s.startTime, s.endTime)}</div>
+          ${s.label ? `<div class="slot-label">${escapeHtml(s.label)}</div>` : ''}
+        </div>
+        <button class="btn-delete-slot" title="Delete slot">&times;</button>
+      </li>
+    `).join('');
+    list.querySelectorAll('.btn-delete-slot').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const li = btn.closest('.slot-item');
+        const slotId = li.dataset.slotId;
+        btn.disabled = true;
+        try {
+          const url = SCHEDULING_API_URL + '?key=' + encodeURIComponent(CLIENT_KEY) + '&action=delete_slot&slotId=' + encodeURIComponent(slotId);
+          const res = await fetch(url);
+          const data = await res.json();
+          if (data.success) { li.remove(); } else { btn.disabled = false; }
+        } catch (err) { btn.disabled = false; }
+      });
+    });
+  }
+
+  function renderApptList(rows) {
+    const list = document.getElementById('apptList');
+    if (!rows || !rows.length) {
+      list.innerHTML = '<div class="empty-state">No appointments booked yet.</div>';
+      return;
+    }
+    const sorted = rows.slice().sort((a, b) => (b.createdAtStr || '').localeCompare(a.createdAtStr || ''));
+    list.innerHTML = sorted.map(a => `
+      <li class="appt-item">
+        <div>
+          <div class="appt-when">${a.date ? formatSlotWhen(a.date, a.startTime, a.endTime) : (a.notes || 'Time TBD')}</div>
+          <div class="appt-who">${escapeHtml(a.customerName || 'Unknown')}${a.customerEmail ? ' &middot; ' + escapeHtml(a.customerEmail) : ''}</div>
+        </div>
+        <span class="appt-status-badge ${escapeHtml(a.status || 'pending_confirmation')}">${(a.status || 'pending').replace(/_/g, ' ')}</span>
+      </li>
+    `).join('');
+  }
+
+  async function loadScheduling() {
+    if (!CLIENT_KEY) return;
+    try {
+      const url = SCHEDULING_API_URL + '?key=' + encodeURIComponent(CLIENT_KEY) + '&action=list';
+      const res = await fetch(url);
+      const data = await res.json();
+      renderSlotList(data.availability || []);
+      renderApptList(data.appointments || []);
+    } catch (err) {
+      document.getElementById('slotList').innerHTML = '<div class="error-state">Couldn\'t load availability.</div>';
+      document.getElementById('apptList').innerHTML = '<div class="error-state">Couldn\'t load appointments.</div>';
+    }
+  }
+
+  document.getElementById('addSlotForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const date = document.getElementById('slotDate').value;
+    const startTime = document.getElementById('slotStart').value;
+    const endTime = document.getElementById('slotEnd').value;
+    const label = document.getElementById('slotLabel').value;
+    if (!date || !startTime || !endTime) return;
+    const submitBtn = e.target.querySelector('.btn-add-slot');
+    submitBtn.disabled = true;
+    try {
+      const url = SCHEDULING_API_URL + '?key=' + encodeURIComponent(CLIENT_KEY) + '&action=add_slot'
+        + '&date=' + encodeURIComponent(date) + '&startTime=' + encodeURIComponent(startTime)
+        + '&endTime=' + encodeURIComponent(endTime) + '&label=' + encodeURIComponent(label);
+      const res = await fetch(url);
+      const data = await res.json();
+      if (data.success) {
+        e.target.reset();
+        loadScheduling();
+      }
+    } catch (err) { /* no-op */ }
+    submitBtn.disabled = false;
+  });
+
   loadDashboard();
+  loadScheduling();
   setInterval(loadDashboard, 60000);
+  setInterval(loadScheduling, 60000);
 </script>
 </body>
 </html>
