@@ -192,6 +192,7 @@
   <div class="tabs">
     <button class="tab-btn active" data-tab="leads">Leads</button>
     <button class="tab-btn" data-tab="activity">Activity Log</button>
+    <button class="tab-btn" data-tab="scheduling">Scheduling</button>
   </div>
 
   <div class="tab-panel active" id="tab-leads">
@@ -207,6 +208,12 @@
   <div class="tab-panel" id="tab-activity">
     <div class="table-wrap">
       <div id="activityContent"><div class="loading-state">Loading activity...</div></div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="tab-scheduling">
+    <div class="card" style="padding:0; overflow:hidden;">
+      <div class="calendly-inline-widget" data-url="https://calendly.com/jason-weng-jwengenterprises?hide_gdpr_banner=1&background_color=161412&text_color=f5f4f2&primary_color=f4622e" style="min-width:320px; height:700px;"></div>
     </div>
   </div>
 
@@ -444,5 +451,6 @@
   loadDashboard();
   setInterval(loadDashboard, 60000);
 </script>
+<script type="text/javascript" src="https://assets.calendly.com/assets/external/widget.js" async></script>
 </body>
 </html>
