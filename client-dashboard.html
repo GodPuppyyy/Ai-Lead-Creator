@@ -134,6 +134,14 @@
   .callback-cell .none { color: #6B665F; font-style: italic; }
   .timestamp-cell { color: #8F8A84; font-size: 11px; white-space: nowrap; }
 
+  .delete-cell { width: 30px; text-align: center; padding-right: 12px !important; }
+  .btn-delete-lead {
+    background: none; border: 1px solid rgba(255,255,255,0.12); color: #8F8A84; border-radius: 7px;
+    width: 24px; height: 24px; cursor: pointer; font-size: 13px; line-height: 1;
+  }
+  .btn-delete-lead:hover { border-color: #F4622E; color: #F4622E; }
+  .btn-delete-lead:disabled { opacity: 0.5; cursor: not-allowed; }
+
   .activity-list { list-style: none; }
   .activity-item { display: flex; gap: 12px; padding: 12px 18px; border-bottom: 1px solid rgba(255,255,255,0.05); }
   .activity-list li:last-child { border-bottom: none; }
@@ -340,11 +348,11 @@
       return;
     }
     const handled = getHandledSet();
-    const rows = leads.map(l => {
+    const rows = leads.map((l, idx) => {
       const id = leadId(l);
       const isHandled = handled.has(id);
       return `
-      <tr class="${isHandled ? 'handled' : ''}" data-lead-id="${escapeHtml(id)}">
+      <tr class="${isHandled ? 'handled' : ''}" data-lead-id="${escapeHtml(id)}" data-lead-index="${idx}">
         <td class="check-cell"><input type="checkbox" class="lead-checkbox" ${isHandled ? 'checked' : ''} title="Mark as handled"></td>
         <td>
           <div class="lead-name">${escapeHtml(l.name) || '(no name)'}</div>
@@ -359,12 +367,13 @@
         <td class="additional-info-cell">${l.additionalInfo ? escapeHtml(l.additionalInfo) : '<span class="none">&mdash;</span>'}</td>
         <td class="callback-cell">${l.callbackTime ? escapeHtml(l.callbackTime) : '<span class="none">Not scheduled</span>'}</td>
         <td class="timestamp-cell">${formatTimestamp(l.timestamp)}</td>
+        <td class="delete-cell"><button class="btn-delete-lead" title="Delete this lead &mdash; not real / spam">&times;</button></td>
       </tr>
     `;
     }).join('');
     content.innerHTML = `
       <table>
-        <thead><tr><th></th><th>Lead</th><th>Qualification</th><th>Problem</th><th>Additional Info</th><th>Callback Time</th><th>Received</th></tr></thead>
+        <thead><tr><th></th><th>Lead</th><th>Qualification</th><th>Problem</th><th>Additional Info</th><th>Callback Time</th><th>Received</th><th></th></tr></thead>
         <tbody>${rows}</tbody>
       </table>`;
 
@@ -377,6 +386,47 @@
         else { set.delete(id); row.classList.remove('handled'); }
         saveHandledSet(set);
         renderStats(computeStats(allLeads));
+      });
+    });
+
+    content.querySelectorAll('.btn-delete-lead').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const row = e.target.closest('tr');
+        const idx = parseInt(row.dataset.leadIndex, 10);
+        const lead = leads[idx];
+        if (!lead) return;
+        if (!confirm('Delete this lead? This removes it permanently and can\'t be undone.')) return;
+        btn.disabled = true;
+        btn.textContent = '...';
+        try {
+          const url = API_URL
+            + '?key=' + encodeURIComponent(CLIENT_KEY)
+            + '&action=delete_lead'
+            + '&name=' + encodeURIComponent(lead.name || '')
+            + '&email=' + encodeURIComponent(lead.email || '')
+            + '&phone=' + encodeURIComponent(lead.phone || '')
+            + '&timestamp=' + encodeURIComponent(lead.timestamp || '');
+          const res = await fetch(url);
+          const data = await res.json();
+          if (data.success) {
+            const id = leadId(lead);
+            const set = getHandledSet();
+            set.delete(id);
+            saveHandledSet(set);
+            allLeads = allLeads.filter(l => leadId(l) !== id);
+            populateDayFilter(allLeads);
+            applyFilters();
+            renderStats(computeStats(allLeads));
+          } else {
+            btn.disabled = false;
+            btn.textContent = '×';
+            alert('Could not delete this lead — it may have already been removed.');
+          }
+        } catch (err) {
+          btn.disabled = false;
+          btn.textContent = '×';
+          alert('Could not delete this lead — please try again.');
+        }
       });
     });
   }
