@@ -322,6 +322,17 @@
     try { localStorage.setItem('handledLeads_' + CLIENT_KEY, JSON.stringify(Array.from(set))); } catch (e) {}
   }
 
+  function computeStats(leads) {
+    const handled = getHandledSet();
+    const active = leads.filter(l => !handled.has(leadId(l)));
+    return {
+      total: active.length,
+      hot: active.filter(l => l.qualification === 'hot').length,
+      warm: active.filter(l => l.qualification === 'warm').length,
+      cold: active.filter(l => l.qualification === 'cold').length
+    };
+  }
+
   function renderLeadsTable(leads) {
     const content = document.getElementById('leadsContent');
     if (!leads.length) {
@@ -365,6 +376,7 @@
         if (e.target.checked) { set.add(id); row.classList.add('handled'); }
         else { set.delete(id); row.classList.remove('handled'); }
         saveHandledSet(set);
+        renderStats(computeStats(allLeads));
       });
     });
   }
@@ -427,8 +439,8 @@
       if (!res.ok) throw new Error('Not found');
       const data = await res.json();
       renderClientInfo(data.client || {});
-      renderStats(data.stats || { total: 0, hot: 0, warm: 0, cold: 0 });
       allLeads = data.leads || [];
+      renderStats(computeStats(allLeads));
       populateDayFilter(allLeads);
       applyFilters();
       renderActivity(data.activity || []);
