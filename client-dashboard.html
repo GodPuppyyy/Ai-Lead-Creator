@@ -142,6 +142,44 @@
   .btn-delete-lead:hover { border-color: #F4622E; color: #F4622E; }
   .btn-delete-lead:disabled { opacity: 0.5; cursor: not-allowed; }
 
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 10000;
+    display: none; align-items: center; justify-content: center; padding: 20px;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal-box {
+    background: #161412; border: 1px solid rgba(255,255,255,0.1); border-radius: 14px;
+    padding: 24px; max-width: 380px; width: 100%; box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+  }
+  .modal-box p { font-size: 14px; color: #F5F4F2; margin-bottom: 20px; line-height: 1.55; }
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+  .modal-btn {
+    padding: 9px 18px; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer;
+    border: none; font-family: inherit;
+  }
+  .modal-btn.cancel { background: transparent; border: 1px solid rgba(255,255,255,0.15); color: #A8A39D; }
+  .modal-btn.cancel:hover { border-color: rgba(255,255,255,0.3); color: #F5F4F2; }
+  .modal-btn.confirm { background: #F4622E; color: #0B0A09; }
+  .modal-btn.confirm:hover { opacity: 0.9; }
+
+  .recently-deleted-wrap { margin-top: 16px; }
+  .recently-deleted-header {
+    padding: 12px 18px; border-bottom: 1px solid rgba(255,255,255,0.07); font-size: 11.5px;
+    font-weight: 700; color: #8F8A84; text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .recently-deleted-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 10px 18px; border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+  .recently-deleted-row:last-child { border-bottom: none; }
+  .rd-days { font-size: 11px; color: #8F8A84; white-space: nowrap; }
+  .btn-restore-lead {
+    background: none; border: 1px solid rgba(94,201,120,0.4); color: #5EC978; border-radius: 8px;
+    padding: 6px 14px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit; white-space: nowrap;
+  }
+  .btn-restore-lead:hover { background: rgba(94,201,120,0.1); }
+  .btn-restore-lead:disabled { opacity: 0.5; cursor: not-allowed; }
+
   .activity-list { list-style: none; }
   .activity-item { display: flex; gap: 12px; padding: 12px 18px; border-bottom: 1px solid rgba(255,255,255,0.05); }
   .activity-list li:last-child { border-bottom: none; }
@@ -210,6 +248,10 @@
     <div class="table-wrap">
       <div id="leadsContent"><div class="loading-state">Loading leads...</div></div>
     </div>
+    <div class="table-wrap recently-deleted-wrap" id="recentlyDeletedWrap" style="display:none;">
+      <div class="recently-deleted-header">Recently Deleted &mdash; restorable for 30 days</div>
+      <div id="recentlyDeletedContent"></div>
+    </div>
   </div>
 
   <div class="tab-panel" id="tab-activity">
@@ -219,6 +261,13 @@
   </div>
 
   <footer>Powered by your AI automation system &middot; last refreshed <span id="lastRefreshed">just now</span></footer>
+</div>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal-box">
+    <p id="modalMessage"></p>
+    <div class="modal-actions" id="modalActions"></div>
+  </div>
 </div>
 
 <script>
@@ -237,6 +286,42 @@
     const div = document.createElement('div');
     div.textContent = str || '';
     return div.innerHTML;
+  }
+
+  function showModal(message, opts) {
+    opts = opts || {};
+    return new Promise((resolve) => {
+      const overlay = document.getElementById('modalOverlay');
+      const msgEl = document.getElementById('modalMessage');
+      const actionsEl = document.getElementById('modalActions');
+      msgEl.textContent = message;
+      actionsEl.innerHTML = '';
+
+      function close(result) {
+        overlay.classList.remove('show');
+        overlay.removeEventListener('click', onOverlayClick);
+        resolve(result);
+      }
+      function onOverlayClick(e) {
+        if (e.target === overlay) close(false);
+      }
+
+      if (opts.cancelText) {
+        const cancelBtn = document.createElement('button');
+        cancelBtn.className = 'modal-btn cancel';
+        cancelBtn.textContent = opts.cancelText;
+        cancelBtn.addEventListener('click', () => close(false));
+        actionsEl.appendChild(cancelBtn);
+      }
+      const confirmBtn = document.createElement('button');
+      confirmBtn.className = 'modal-btn confirm';
+      confirmBtn.textContent = opts.confirmText || 'OK';
+      confirmBtn.addEventListener('click', () => close(true));
+      actionsEl.appendChild(confirmBtn);
+
+      overlay.addEventListener('click', onOverlayClick);
+      overlay.classList.add('show');
+    });
   }
 
   function formatTimestamp(ts) {
@@ -395,7 +480,11 @@
         const idx = parseInt(row.dataset.leadIndex, 10);
         const lead = leads[idx];
         if (!lead) return;
-        if (!confirm('Delete this lead? This removes it permanently and can\'t be undone.')) return;
+        const ok = await showModal(
+          'Move this lead to Recently Deleted? You\'ll be able to restore it any time in the next 30 days — after that it\'s gone for good.',
+          { confirmText: 'Delete', cancelText: 'Cancel' }
+        );
+        if (!ok) return;
         btn.disabled = true;
         btn.textContent = '...';
         try {
@@ -409,23 +498,70 @@
           const res = await fetch(url);
           const data = await res.json();
           if (data.success) {
-            const id = leadId(lead);
-            const set = getHandledSet();
-            set.delete(id);
-            saveHandledSet(set);
-            allLeads = allLeads.filter(l => leadId(l) !== id);
-            populateDayFilter(allLeads);
-            applyFilters();
-            renderStats(computeStats(allLeads));
+            loadDashboard();
           } else {
             btn.disabled = false;
             btn.textContent = '×';
-            alert('Could not delete this lead — it may have already been removed.');
+            await showModal('Could not delete this lead — it may have already been removed.', { confirmText: 'OK' });
           }
         } catch (err) {
           btn.disabled = false;
           btn.textContent = '×';
-          alert('Could not delete this lead — please try again.');
+          await showModal('Could not delete this lead — please try again.', { confirmText: 'OK' });
+        }
+      });
+    });
+  }
+
+  function renderRecentlyDeleted(list) {
+    const wrap = document.getElementById('recentlyDeletedWrap');
+    const content = document.getElementById('recentlyDeletedContent');
+    if (!list || !list.length) {
+      wrap.style.display = 'none';
+      content.innerHTML = '';
+      return;
+    }
+    wrap.style.display = 'block';
+    content.innerHTML = list.map((l, idx) => `
+      <div class="recently-deleted-row" data-index="${idx}">
+        <div>
+          <div class="lead-name">${escapeHtml(l.name) || '(no name)'}</div>
+          <div class="lead-contact">${escapeHtml(l.email || l.phone || '')}</div>
+        </div>
+        <div class="rd-days">${l.daysRemaining} day${l.daysRemaining === 1 ? '' : 's'} left</div>
+        <button class="btn-restore-lead">Restore</button>
+      </div>
+    `).join('');
+
+    content.querySelectorAll('.btn-restore-lead').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const row = e.target.closest('.recently-deleted-row');
+        const idx = parseInt(row.dataset.index, 10);
+        const lead = list[idx];
+        if (!lead) return;
+        btn.disabled = true;
+        btn.textContent = '...';
+        try {
+          const url = API_URL
+            + '?key=' + encodeURIComponent(CLIENT_KEY)
+            + '&action=restore_lead'
+            + '&name=' + encodeURIComponent(lead.name || '')
+            + '&email=' + encodeURIComponent(lead.email || '')
+            + '&phone=' + encodeURIComponent(lead.phone || '')
+            + '&timestamp=' + encodeURIComponent(lead.timestamp || '');
+          const res = await fetch(url);
+          const data = await res.json();
+          if (data.success) {
+            loadDashboard();
+          } else {
+            btn.disabled = false;
+            btn.textContent = 'Restore';
+            await showModal('Could not restore this lead.', { confirmText: 'OK' });
+          }
+        } catch (err) {
+          btn.disabled = false;
+          btn.textContent = 'Restore';
+          await showModal('Could not restore this lead — please try again.', { confirmText: 'OK' });
         }
       });
     });
@@ -493,6 +629,7 @@
       renderStats(computeStats(allLeads));
       populateDayFilter(allLeads);
       applyFilters();
+      renderRecentlyDeleted(data.recentlyDeleted || []);
       renderActivity(data.activity || []);
       document.getElementById('lastRefreshed').textContent = new Date().toLocaleTimeString();
     } catch (err) {
