@@ -86,7 +86,7 @@
   .tab-panel { display: none; }
   .tab-panel.active { display: block; }
 
-  .filter-row { margin-bottom: 14px; display: flex; gap: 10px; flex-wrap: wrap; }
+  .filter-row { margin-bottom: 14px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
   #search, #dayFilter {
     background: #161412; border: 1px solid rgba(255,255,255,0.09); border-radius: 8px;
     padding: 8px 12px; color: #F5F4F2; font-size: 12.5px; font-family: inherit;
@@ -95,6 +95,12 @@
   #dayFilter { cursor: pointer; }
   #search::placeholder { color: #6B665F; }
   #search:focus, #dayFilter:focus { outline: none; border-color: #F4622E; }
+  .btn-refresh {
+    background: #161412; border: 1px solid rgba(255,255,255,0.09); color: #F5F4F2; border-radius: 8px;
+    padding: 8px 14px; font-size: 12.5px; font-family: inherit; font-weight: 600; cursor: pointer;
+  }
+  .btn-refresh:hover { border-color: #F4622E; color: #F4622E; }
+  .btn-refresh:disabled { opacity: 0.6; cursor: not-allowed; }
 
   .table-wrap { background: #161412; border: 1px solid rgba(255,255,255,0.07); border-radius: 16px; overflow: auto; }
   table { width: 100%; border-collapse: collapse; font-size: 12px; }
@@ -244,6 +250,7 @@
     <div class="filter-row">
       <select id="dayFilter"><option value="all">All Days</option></select>
       <input type="text" id="search" placeholder="Search leads...">
+      <button class="btn-refresh" id="refreshBtn">&#8635; Refresh</button>
     </div>
     <div class="table-wrap">
       <div id="leadsContent"><div class="loading-state">Loading leads...</div></div>
@@ -637,11 +644,24 @@
     }
   }
 
+  async function manualRefresh() {
+    const btn = document.getElementById('refreshBtn');
+    btn.disabled = true;
+    const original = btn.innerHTML;
+    btn.innerHTML = '&#8635; Refreshing...';
+    await loadDashboard();
+    btn.disabled = false;
+    btn.innerHTML = original;
+  }
+
   document.getElementById('search').addEventListener('input', applyFilters);
   document.getElementById('dayFilter').addEventListener('change', applyFilters);
+  document.getElementById('refreshBtn').addEventListener('click', manualRefresh);
 
+  // Loads once on page load/refresh only — no background polling, so an open tab
+  // doesn't keep hitting the webhook every minute. Use the Refresh button (or reload
+  // the page) to pull the latest leads.
   loadDashboard();
-  setInterval(loadDashboard, 60000);
 </script>
 </body>
 </html>
